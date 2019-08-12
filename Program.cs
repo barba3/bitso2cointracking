@@ -1,21 +1,19 @@
-﻿using BitsoDotNet;
-using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.Globalization;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Bitso2Cointracking
+﻿namespace Bitso2Cointracking
 {
-    public class Program
+    using System;
+    using System.Collections.Generic;
+    using System.Configuration;
+    using System.Globalization;
+    using System.Linq;
+    using BitsoDotNet;
+
+    public static class Program
     {
         public const string BitsoName = "Bitso";
         public const string Mxn = "MXN";
         public const int BitsoQueryPageSize = 100;
 
-        static void Main(string[] args)
+        public static void Main()
         {
             // Read settings.
             var apikey = ConfigurationManager.AppSettings["BitsoApikey"];
@@ -42,7 +40,7 @@ namespace Bitso2Cointracking
                     SellCurrency = w.Currency.ToUpperInvariant(),
                     TxId = w.Wid,
                     Exchange = BitsoName,
-                    Date = DateTime.Parse(w.CreatedAt)
+                    Date = DateTime.Parse(w.CreatedAt, CultureInfo.InvariantCulture),
                 }));
             Console.Error.WriteLine("Done");
 
@@ -53,14 +51,23 @@ namespace Bitso2Cointracking
             transactions.AddRange(
                 fundings.Select(w => new Transaction
                 {
-                    Type = w.Currency.ToUpperInvariant().Equals(Mxn) && !cointrackingCurrency.Equals(Mxn) ? TransactionType.Income : TransactionType.Deposit,
+                    Type = w.Currency.Equals(Mxn, StringComparison.OrdinalIgnoreCase) &&
+                        !cointrackingCurrency.Equals(Mxn, StringComparison.OrdinalIgnoreCase) ?
+                            TransactionType.Income :
+                            TransactionType.Deposit,
                     BuyAmount = w.AmountAsDecimal,
                     BuyCurrency = w.Currency.ToUpperInvariant(),
-                    BuyValueInCurrency = w.Currency.ToUpperInvariant().Equals(Mxn) && !cointrackingCurrency.Equals(Mxn) ? (decimal?)w.AmountAsDecimal * currencyConverter.GetExchangeRate(Mxn, cointrackingCurrency, DateTime.Parse(w.CreatedAt)).Result : null,
+                    BuyValueInCurrency = w.Currency.Equals(Mxn, StringComparison.OrdinalIgnoreCase) &&
+                        !cointrackingCurrency.Equals(Mxn, StringComparison.OrdinalIgnoreCase) ?
+                        (decimal?)w.AmountAsDecimal * currencyConverter.GetExchangeRate(Mxn, cointrackingCurrency, DateTime.Parse(w.CreatedAt, CultureInfo.InvariantCulture)).Result :
+                        null,
                     TxId = w.Fid,
                     Exchange = BitsoName,
-                    Date = DateTime.Parse(w.CreatedAt),
-                    Comment = w.Currency.ToUpperInvariant().Equals(Mxn) && !cointrackingCurrency.Equals(Mxn) ? "Foreign currency deposit (not income)" : null
+                    Date = DateTime.Parse(w.CreatedAt, CultureInfo.InvariantCulture),
+                    Comment = w.Currency.Equals(Mxn, StringComparison.OrdinalIgnoreCase) &&
+                        !cointrackingCurrency.Equals(Mxn, StringComparison.OrdinalIgnoreCase) ?
+                            "Foreign currency deposit (not income)" :
+                            null,
                 }));
             Console.Error.WriteLine("Done");
 
@@ -68,7 +75,7 @@ namespace Bitso2Cointracking
             if (withdrawals.Length == BitsoQueryPageSize)
             {
                 throw new NotImplementedException(
-                    $"Can't download more than {BitsoQueryPageSize} withdrawals. " + 
+                    $"Can't download more than {BitsoQueryPageSize} withdrawals. " +
                     "Consider contributing to BitsoDotNet library and this project.");
             }
             else if (fundings.Length == BitsoQueryPageSize)
@@ -99,10 +106,10 @@ namespace Bitso2Cointracking
                         {
                             Type = TransactionType.Trade,
                             Exchange = BitsoName,
-                            Date = DateTime.Parse(userTrade.CreatedAt),
+                            Date = DateTime.Parse(userTrade.CreatedAt, CultureInfo.InvariantCulture),
                             TxId = userTrade.Tid.ToString(CultureInfo.InvariantCulture),
                             FeeCurrency = userTrade.FeesCurrency.ToUpperInvariant(),
-                            Fee = userTrade.FeesAmountAsDecimal
+                            Fee = userTrade.FeesAmountAsDecimal,
                         };
 
                         if (userTrade.Side.Equals("buy", StringComparison.OrdinalIgnoreCase))
@@ -125,7 +132,8 @@ namespace Bitso2Cointracking
 
                         Console.Error.Write(".");
                     }
-                } while (marker != 0);
+                }
+                while (marker != 0);
 
                 Console.Error.WriteLine(" Done");
             }
@@ -137,7 +145,8 @@ namespace Bitso2Cointracking
             {
                 transaction.WriteCsvLine(Console.Out);
             }
-            Console.Error.WriteLine("Done Ssrting and outputting data to stdout.");
+
+            Console.Error.WriteLine("Done sorting and outputting data to stdout.");
         }
     }
 }

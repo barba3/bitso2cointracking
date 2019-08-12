@@ -1,17 +1,16 @@
-﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Http;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Bitso2Cointracking
+﻿namespace Bitso2Cointracking
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Globalization;
+    using System.Linq;
+    using System.Net.Http;
+    using System.Threading.Tasks;
+    using Newtonsoft.Json.Linq;
+
     public class CurrencyConverter
     {
-        private Dictionary<string, decimal> ExchangeCache = new Dictionary<string, decimal>();
+        private Dictionary<string, decimal> exchangeCache = new Dictionary<string, decimal>();
 
         public async Task<decimal> GetExchangeRate(string from, string to, DateTime date)
         {
@@ -25,10 +24,10 @@ namespace Bitso2Cointracking
                 throw new ArgumentException("Can't be empty", nameof(to));
             }
 
-            string formattedDate = date.ToString("yyyy-M-d");
+            string formattedDate = date.ToString("yyyy-M-d", CultureInfo.InvariantCulture);
             string cacheKey = GetCacheKey(from, to, formattedDate);
             decimal result;
-            bool cacheHit = ExchangeCache.TryGetValue(cacheKey, out result);
+            bool cacheHit = this.exchangeCache.TryGetValue(cacheKey, out result);
 
             if (!cacheHit)
             {
@@ -36,21 +35,23 @@ namespace Bitso2Cointracking
                 to = to.ToUpperInvariant();
                 using (var client = new HttpClient())
                 {
-                    client.BaseAddress = new Uri("https://api.exchangeratesapi.io");
-                    var response = await client.GetAsync($"{formattedDate}?symbols={to}&base={from}");
-                    var stringResult = await response.Content.ReadAsStringAsync();
+                    var baseUri = new Uri("https://api.exchangeratesapi.io");
+                    var uri = new Uri(baseUri, $"{formattedDate}?symbols={to}&base={from}");
+                    client.BaseAddress = baseUri;
+                    var response = await client.GetAsync(uri).ConfigureAwait(true);
+                    var stringResult = await response.Content.ReadAsStringAsync().ConfigureAwait(true);
                     response.EnsureSuccessStatusCode();
                     var parsedJson = JObject.Parse(stringResult);
-                    result = decimal.Parse(parsedJson["rates"].First().First().ToString());
+                    result = decimal.Parse(parsedJson["rates"].First().First().ToString(), CultureInfo.InvariantCulture);
                 }
 
-                this.ExchangeCache[cacheKey] = result;
+                this.exchangeCache[cacheKey] = result;
             }
 
             return result;
         }
 
-        private string GetCacheKey(string from, string to, string formattedDate)
+        private static string GetCacheKey(string from, string to, string formattedDate)
         {
             string key = $"{from.ToUpperInvariant()}_{to.ToUpperInvariant()}_{formattedDate}";
             return key;
