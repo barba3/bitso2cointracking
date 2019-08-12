@@ -1,8 +1,8 @@
 # Bitso2Cointracking
-A tool to export cryptocurrency transactions from Bitso to Cointracking in CSV format
+A tool to export cryptocurrency transactions from Bitso to [Cointracking](https://www.cointracking.info) in CSV format
 
 ## Set up
-1. Create an API key in [Bitso website](https://help.bitso.com/en/support/solutions/articles/1000166794-tutorial-creating-an-api-entry). Read-only permissions are enough.
+1. Create an API key in [Bitso website](https://bitso.com/api_setup). Read-only permissions are enough.
 2. Enter the API key and secret in App.config file
 
 ## Use
